@@ -31,21 +31,42 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	int sockfd, numbytes;  
-	char buf[MAXDATASIZE];
+	char buf[MAXDATASIZE],port[MAXDATASIZE], out1[MAXDATASIZE], out2[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+	char *h=NULL, *h_=NULL;
+	FILE *fp;
 
 	if (argc != 2) {
 	    fprintf(stderr,"usage: client hostname\n");
 	    exit(1);
 	}
 
+	memset(port,0,sizeof(port));
+	memset(out1,0,sizeof(out1));
+	memset(out2,0,sizeof(out2));
+
+	h = strchr(argv[1],':');
+	if ((h = strchr(h+1,':'))!=NULL){
+		h_ = strchr(h,'/');
+		printf("%s\n%s\n",h,h_);
+		memcpy(port, h+1, h_-h-1);
+	}else{
+		memcpy(port, "80", 2);
+	}
+	// printf("port is : %s\n", port);
+
+	memcpy(out1, "wget ", 5);
+	memcpy(out2, strchr(argv[1],'/')+2, (int)strlen(argv[1])-(strchr(argv[1],'/')-argv[1]+2));
+	strcat(strcat(out1,out2),"\r\n");
+	// printf("out2  is %s\n", out2);
+
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-
-	if ((rv = getaddrinfo(argv[1], PORT, &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(argv[1], port, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -72,6 +93,9 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 
+	printf("%s",argv[1]);
+
+	
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
 			s, sizeof s);
 	printf("client: connecting to %s\n", s);
@@ -84,6 +108,17 @@ int main(int argc, char *argv[])
 	}
 
 	buf[numbytes] = '\0';
+
+	// my code
+	fp = fopen("output","w");
+	if (fp==NULL){
+		perror("write error");
+		exit(0);
+	}else{
+		fputs(buf, fp);
+		printf("finish writing into a file\n");
+		fclose(fp);
+	}
 
 	printf("client: received '%s'\n",buf);
 

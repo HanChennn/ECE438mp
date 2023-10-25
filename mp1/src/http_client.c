@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 	int rv;
 	char s[INET6_ADDRSTRLEN];
 	char *h=NULL, *h_=NULL, *h_what=NULL;
+	int first = 1;
 	FILE *fp;
 
 	if (argc != 2) {
@@ -131,6 +132,11 @@ int main(int argc, char *argv[])
 		exit(0);
 	}else{
 		while(1){
+			if (first == 1){
+				// *strstr(buf, "\r\n")=0;
+				first = 0;
+				buf[0]=0;
+			}
 			fputs(buf, fp);
 			memset(buf,0,sizeof(buf));
 			printf("finish writing into a file\n");

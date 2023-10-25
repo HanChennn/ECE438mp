@@ -134,8 +134,8 @@ int main(int argc, char *argv[])
 		while(1){
 			memset(buf,'\0',sizeof(buf));
 			numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0);
-			// printf("%d\n",numbytes);
-			// printf("%s\n",buf);
+			printf("%d\n",numbytes);
+			printf("%s\n",buf);
 			if(numbytes==0) break;
 			if(numbytes==-1){
 				perror("recv error");
@@ -143,10 +143,10 @@ int main(int argc, char *argv[])
 			}
 			buf[numbytes]='\0';
 			if(first==1){
-				// printf("ha?%s\n",strstr(buf,"\r\n")+3);
-				// fwrite(strstr(buf,"\r\n")+3,sizeof(char),numbytes-(int)(strstr(buf,"\r\n")-buf)-3,fp);
-				fputs(strstr(buf,"\r\n")+4,fp);
-				// for(int i=0;i<20;i++)printf("%c %d\n",buf[i],(int)buf[i]);
+				// printf("%s\n",strstr(buf,"\r\n")+4);
+				fwrite(strstr(buf,"\r\n")+4,sizeof(char),numbytes-(int)(strstr(buf,"\r\n")-buf)-4,fp);
+				// fputs(strstr(buf,"\r\n")+4,fp);
+				// for(int i=0;i<25;i++)printf("%c %d\n",buf[i],(int)buf[i]);
 				first=0;
 			}else fwrite(buf,sizeof(char),numbytes,fp);
 		}

@@ -19,7 +19,7 @@
 
 #define BACKLOG 10	 // how many pending connections queue will hold
 
-#define MAXDATASIZE 1024
+#define MAXDATASIZE 2048
 
 void sigchld_handler(int s)
 {

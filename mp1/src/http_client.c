@@ -16,7 +16,7 @@
 
 #define PORT "3490" // the port client will be connecting to 
 
-#define MAXDATASIZE 100 // max number of bytes we can get at once 
+#define MAXDATASIZE 1024 // max number of bytes we can get at once 
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -31,11 +31,12 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	int sockfd, numbytes;  
-	char buf[MAXDATASIZE],hostname[MAXDATASIZE],port[MAXDATASIZE], out1[MAXDATASIZE], out2[MAXDATASIZE], wget[MAXDATASIZE*4];
+	char buf[MAXDATASIZE],host[MAXDATASIZE],hostname[MAXDATASIZE],port[MAXDATASIZE], out2[MAXDATASIZE], wget[MAXDATASIZE*4];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
 	char *h=NULL, *h_=NULL, *h_what=NULL;
+	int first = 1;
 	FILE *fp;
 
 	if (argc != 2) {
@@ -44,8 +45,8 @@ int main(int argc, char *argv[])
 	}
 
 	memset(port,0,sizeof(port));
+	memset(host,0,sizeof(host));
 	memset(hostname,0,sizeof(hostname));
-	memset(out1,0,sizeof(out1));
 	memset(out2,0,sizeof(out2));
 	memset(wget,0,sizeof(wget));
 
@@ -60,27 +61,27 @@ int main(int argc, char *argv[])
 		memcpy(port, "80", 2);
 		memcpy(hostname, h_what+3, (int)(h-h_what)-3);
 	}
+	memcpy(host,hostname,strlen(hostname));
 	printf("host name is : %s\n",hostname);
 	printf("port is : %s\n", port);
 
-	memcpy(out1, "wget ", 5);
 	memcpy(out2, strchr(argv[1],'/')+2, (int)strlen(argv[1])-(strchr(argv[1],'/')-argv[1]+2));
-	strcat(strcat(out1,out2),"\r\n");
 	printf("out2 is %s\n", out2);
-	printf("out1 is %s\n", out1);
 
 	printf("%s\n",argv[1]);
 	memcpy(wget, "GET /", 5);
-	memcpy(out2, strchr(out2,'/')+1, (int)strlen(out2)-(int)(strchr(out2,'/')-out2)-1);
+	strcat(wget, strchr(out2,'/')+1); //, (int)strlen(out2)-(int)(strchr(out2,'/')-out2)-1
 	strcat(strcat(hostname,":"),port);
-	strcat(strcat(strcat(wget, out2)," HTTP/1.1\r\nUser-Agent: Wget/1.12 (linux-gnu)\r\nHost: "),hostname);
+	strcat(strcat(wget," HTTP/1.1\r\nUser-Agent: Wget/1.12 (linux-gnu)\r\nHost: "),hostname);
 	strcat(wget, "\r\nConnection: Keep-Alive\r\n");
 	printf("%s\n",wget);
+	printf("host is :%s\n",host);
+	printf("port is :%s\n", port);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	if ((rv = getaddrinfo(argv[1], port, &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(host, port, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -123,14 +124,24 @@ int main(int argc, char *argv[])
 
 	buf[numbytes] = '\0';
 
+
 	// store the file
 	fp = fopen("output","w");
 	if (fp==NULL){
 		perror("write error");
 		exit(0);
 	}else{
-		fputs(buf, fp);
-		printf("finish writing into a file\n");
+		while(1){
+			if (first == 1){
+				// *strstr(buf, "\r\n")=0;
+				first = 0;
+				buf[0]=0;
+			}
+			fputs(buf, fp);
+			memset(buf,0,sizeof(buf));
+			printf("finish writing into a file\n");
+			if((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0))<=0) break;
+		}
 		fclose(fp);
 	}
 

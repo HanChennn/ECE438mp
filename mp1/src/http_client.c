@@ -126,22 +126,21 @@ int main(int argc, char *argv[])
 
 
 	// store the file
-	fp = fopen("output","w");
+	fp = fopen("output","wb");
 	if (fp==NULL){
 		perror("write error");
 		exit(0);
 	}else{
 		while(1){
-			if (first == 1){
-				// *strstr(buf, "\r\n")=0;
-				first = 0;
-				buf[0]=0;
-			}
+			memset(buf,'\0',sizeof(buf));
+			numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0);
+			printf("%d\n",numbytes);
+			if(numbytes<=0) break;
+			buf[numbytes]='\0';
 			fputs(buf, fp);
-			memset(buf,0,sizeof(buf));
-			printf("finish writing into a file\n");
-			if((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0))<=0) break;
+			printf("%s\n",buf);
 		}
+		printf("finish writing into a file\n");
 		fclose(fp);
 	}
 

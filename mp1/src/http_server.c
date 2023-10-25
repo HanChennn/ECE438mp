@@ -137,6 +137,8 @@ int main(int argc, char *argv[])
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
 			
+			memset(buf,0,sizeof(buf));
+			memset(reply,0,sizeof(reply));
 			byte_received = recv(new_fd, buf, sizeof(buf)-1, 0);
 			if(byte_received<=0)perror("recv error!");
 			buf[byte_received]='\0';
@@ -165,16 +167,19 @@ int main(int argc, char *argv[])
 			if (send(new_fd, reply, strlen(reply), 0) == -1)
 				perror("server send error");
 
-			while(1){
-				memset(buf,0,sizeof(buf));
-				if ((byte_read = fread(buf, 1, sizeof(buf),fp))!=0){
-					if(send(new_fd, buf, strlen(buf), 0) == -1){
-						perror("server file send error");
-						break;
-					}
-				}else break;
+			if(fp!=NULL){
+				while(1){
+					memset(buf,'\0',sizeof(buf));
+					if ((byte_read = fread(buf, 1, MAXDATASIZE-1,fp))>0){
+						printf("%d\n",byte_read);
+						if(send(new_fd, buf, byte_read, 0) == -1){
+							perror("server file send error");
+							break;
+						}
+					}else break;
+				}
+				fclose(fp);
 			}
-	
 			
 			close(new_fd);
 			exit(0);

@@ -16,7 +16,7 @@
 
 #define PORT "3490" // the port client will be connecting to 
 
-#define MAXDATASIZE 1024 // max number of bytes we can get at once 
+#define MAXDATASIZE 5120 // max number of bytes we can get at once 
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+	char request[MAXDATASIZE];
 	char *h=NULL, *h_=NULL, *h_what=NULL;
 	int first = 1;
 	FILE *fp;
@@ -115,7 +116,12 @@ int main(int argc, char *argv[])
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	send(sockfd, wget, strlen(wget), 0);
+	// send(sockfd, wget, strlen(wget), 0);
+	snprintf(request,sizeof(request),wget);
+	if(send(sockfd,request,strlen(request),0)==-1){
+		perror("request error");
+		exit(1);
+	}
 
 	// if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
 	//     perror("recv");
@@ -134,21 +140,21 @@ int main(int argc, char *argv[])
 		while(1){
 			memset(buf,'\0',sizeof(buf));
 			numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0);
-			// printf("%d\n",numbytes);
-			// printf("%s\n",buf);
-			if(numbytes==0) break;
-			if(numbytes==-1){
-				perror("recv error");
-				exit(1);
-			}
+			printf("%d\n",numbytes);
+			printf("%s\n",buf);
+			if(numbytes<=0) break;
+			// if(numbytes==-1){
+			// 	perror("recv error");
+			// 	exit(1);
+			// }
 			buf[numbytes]='\0';
 			if(first==1){
-				// printf("ha?%s\n",strstr(buf,"\r\n")+3);
-				// fwrite(strstr(buf,"\r\n")+3,sizeof(char),numbytes-(int)(strstr(buf,"\r\n")-buf)-3,fp);
-				fputs(strstr(buf,"\r\n")+4,fp);
-				// for(int i=0;i<20;i++)printf("%c %d\n",buf[i],(int)buf[i]);
+				// printf("%s\n",strstr(buf,"\r\n")+4);
+				fwrite(strstr(buf,"\r\n\r\n")+4,1,numbytes-(int)(strstr(buf,"\r\n\r\n")-buf)-4,fp);
+				// fputs(strstr(buf,"\r\n")+4,fp);
+				// for(int i=0;i<25;i++)printf("%c %d\n",buf[i],(int)buf[i]);
 				first=0;
-			}else fwrite(buf,sizeof(char),numbytes,fp);
+			}else fwrite(buf,1,numbytes,fp);
 		}
 		printf("finish writing into a file\n");
 		fclose(fp);

@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
 	    fprintf(stderr,"usage: lacking server port number\n");
 	    exit(1);
 	}
+	printf("port:%s\n",argv[1]);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -114,6 +115,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	// if(fopen("file.txt","rb")==NULL)printf("NO!\n");
+	// else printf("YES!\n");
+	// if(fopen("/Downloads/ECE438mp/mp1/file.txt","rb")==NULL)printf("NO!\n");
+	// else printf("YES!\n");
 	printf("server: waiting for connections...\n");
 
 	while(1) {  // main accept() loop
@@ -135,9 +140,10 @@ int main(int argc, char *argv[])
 			byte_received = recv(new_fd, buf, sizeof(buf)-1, 0);
 			if(byte_received<=0)perror("recv error!");
 			buf[byte_received]='\0';
+			printf("%s\n",buf);
 
 			if ((pp = strstr(buf,"GET"))!=NULL){
-				pp = strchr(buf,' ');
+				pp = strchr(buf,'/');
 				memcpy(addr, pp+1, (int)(strchr(pp+1,' ')-pp)-1);
 				printf("fetch addr:%s\n",addr);
 
@@ -154,7 +160,9 @@ int main(int argc, char *argv[])
 			}else{
 				strcat(memcpy(reply, o_err, strlen(o_err)),"\r\n");
 			}
-			if (send(new_fd, buf, strlen(buf), 0) == -1)
+			printf("reply:%s\n",reply);
+
+			if (send(new_fd, reply, strlen(reply), 0) == -1)
 				perror("server send error");
 
 			while(1){

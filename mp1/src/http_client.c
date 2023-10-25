@@ -31,11 +31,11 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	int sockfd, numbytes;  
-	char buf[MAXDATASIZE],port[MAXDATASIZE], out1[MAXDATASIZE], out2[MAXDATASIZE];
+	char buf[MAXDATASIZE],hostname[MAXDATASIZE],port[MAXDATASIZE], out1[MAXDATASIZE], out2[MAXDATASIZE], wget[MAXDATASIZE*4];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
-	char *h=NULL, *h_=NULL;
+	char *h=NULL, *h_=NULL, *h_what=NULL;
 	FILE *fp;
 
 	if (argc != 2) {
@@ -44,24 +44,38 @@ int main(int argc, char *argv[])
 	}
 
 	memset(port,0,sizeof(port));
+	memset(hostname,0,sizeof(hostname));
 	memset(out1,0,sizeof(out1));
 	memset(out2,0,sizeof(out2));
+	memset(wget,0,sizeof(wget));
 
-	h = strchr(argv[1],':');
-	if ((h = strchr(h+1,':'))!=NULL){
+	h_what = strchr(argv[1],':');
+	if ((h = strchr(h_what+1,':'))!=NULL){
 		h_ = strchr(h,'/');
-		printf("%s\n%s\n",h,h_);
+		// printf("%s\n%s\n",h,h_);
 		memcpy(port, h+1, h_-h-1);
+		memcpy(hostname, h_what+3, (int)(h-h_what)-3);
 	}else{
+		h = strchr(h_what+3, '/');
 		memcpy(port, "80", 2);
+		memcpy(hostname, h_what+3, (int)(h-h_what)-3);
 	}
-	// printf("port is : %s\n", port);
+	printf("host name is : %s\n",hostname);
+	printf("port is : %s\n", port);
 
 	memcpy(out1, "wget ", 5);
 	memcpy(out2, strchr(argv[1],'/')+2, (int)strlen(argv[1])-(strchr(argv[1],'/')-argv[1]+2));
 	strcat(strcat(out1,out2),"\r\n");
-	// printf("out2  is %s\n", out2);
+	printf("out2 is %s\n", out2);
+	printf("out1 is %s\n", out1);
 
+	printf("%s\n",argv[1]);
+	memcpy(wget, "GET /", 5);
+	memcpy(out2, strchr(out2,'/')+1, (int)strlen(out2)-(int)(strchr(out2,'/')-out2)-1);
+	strcat(strcat(hostname,":"),port);
+	strcat(strcat(strcat(wget, out2)," HTTP/1.1\r\nUser-Agent: Wget/1.12 (linux-gnu)\r\nHost: "),hostname);
+	strcat(wget, "\r\nConnection: Keep-Alive\r\n");
+	printf("%s\n",wget);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -92,15 +106,15 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "client: failed to connect\n");
 		return 2;
 	}
-
-	printf("%s",argv[1]);
-
 	
+
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
 			s, sizeof s);
 	printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
+
+	send(sockfd, wget, strlen(wget), 0);
 
 	if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
 	    perror("recv");
@@ -109,7 +123,7 @@ int main(int argc, char *argv[])
 
 	buf[numbytes] = '\0';
 
-	// my code
+	// store the file
 	fp = fopen("output","w");
 	if (fp==NULL){
 		perror("write error");

@@ -170,8 +170,9 @@ int main(int argc, char *argv[])
 			if(fp!=NULL){
 				while(1){
 					memset(buf,'\0',sizeof(buf));
-					if ((byte_read = fread(buf, 1, MAXDATASIZE-1,fp))>0){
-						printf("%d\n",byte_read);
+					if ((byte_read = fread(buf, sizeof(char), MAXDATASIZE-1,fp))>0){
+						// printf("%d\n",byte_read);
+						// printf("%s\n",buf);
 						if(send(new_fd, buf, byte_read, 0) == -1){
 							perror("server file send error");
 							break;

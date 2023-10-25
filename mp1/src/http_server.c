@@ -19,6 +19,8 @@
 
 #define BACKLOG 10	 // how many pending connections queue will hold
 
+#define MAXDATASIZE 1024
+
 void sigchld_handler(int s)
 {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
@@ -34,23 +36,37 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd, new_fd, byte_received, byte_read;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
 	int yes=1;
-	char s[INET6_ADDRSTRLEN];
+	char s[INET6_ADDRSTRLEN], buf[MAXDATASIZE], reply[MAXDATASIZE], addr[MAXDATASIZE];
+	const char correct[]="HTTP/1.1 200 OK\r\n";
+	const char not_find[]="HTTP/1.1 404 Not Found\r\n";
+	const char o_err[]="HTTP/1.1 400 Bad Request\r\n";
+	char *pp=NULL;
 	int rv;
+	FILE* fp;
+
+	memset(buf,0,sizeof(buf));
+	memset(reply,0,sizeof(reply));
+	memset(addr,0,sizeof(addr));
+
+	if (argc != 2) {
+	    fprintf(stderr,"usage: lacking server port number\n");
+	    exit(1);
+	}
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
 
-	if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(NULL, argv[1], &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
@@ -115,8 +131,43 @@ int main(void)
 
 		if (!fork()) { // this is the child process
 			close(sockfd); // child doesn't need the listener
-			if (send(new_fd, "Hello, world!", 13, 0) == -1)
-				perror("send");
+			
+			byte_received = recv(new_fd, buf, sizeof(buf)-1, 0);
+			if(byte_received<=0)perror("recv error!");
+			buf[byte_received]='\0';
+
+			if ((pp = strstr(buf,"GET"))!=NULL){
+				pp = strchr(buf,' ');
+				memcpy(addr, pp+1, (int)(strchr(pp+1,' ')-pp)-1);
+				printf("fetch addr:%s\n",addr);
+
+				if ((pp = strstr(buf,"HTTP/"))!=NULL){
+					if((fp = fopen(addr,"rb"))!=NULL){
+						strcat(memcpy(reply, correct, strlen(correct)),"\r\n");
+					}else{
+						strcat(memcpy(reply, not_find, strlen(not_find)),"\r\n");
+					}
+					
+				}else{
+					strcat(memcpy(reply, o_err, strlen(o_err)),"\r\n");
+				}
+			}else{
+				strcat(memcpy(reply, o_err, strlen(o_err)),"\r\n");
+			}
+			if (send(new_fd, buf, strlen(buf), 0) == -1)
+				perror("server send error");
+
+			while(1){
+				memset(buf,0,sizeof(buf));
+				if ((byte_read = fread(buf, 1, sizeof(buf),fp))!=0){
+					if(send(new_fd, buf, strlen(buf), 0) == -1){
+						perror("server file send error");
+						break;
+					}
+				}else break;
+			}
+	
+			
 			close(new_fd);
 			exit(0);
 		}

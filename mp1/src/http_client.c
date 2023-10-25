@@ -117,12 +117,12 @@ int main(int argc, char *argv[])
 
 	send(sockfd, wget, strlen(wget), 0);
 
-	if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-	    perror("recv");
-	    exit(1);
-	}
+	// if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+	//     perror("recv");
+	//     exit(1);
+	// }
 
-	buf[numbytes] = '\0';
+	// buf[numbytes] = '\0';
 
 
 	// store the file
@@ -134,11 +134,21 @@ int main(int argc, char *argv[])
 		while(1){
 			memset(buf,'\0',sizeof(buf));
 			numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0);
-			printf("%d\n",numbytes);
-			if(numbytes<=0) break;
+			// printf("%d\n",numbytes);
+			// printf("%s\n",buf);
+			if(numbytes==0) break;
+			if(numbytes==-1){
+				perror("recv error");
+				exit(1);
+			}
 			buf[numbytes]='\0';
-			fputs(buf, fp);
-			printf("%s\n",buf);
+			if(first==1){
+				// printf("ha?%s\n",strstr(buf,"\r\n")+3);
+				// fwrite(strstr(buf,"\r\n")+3,sizeof(char),numbytes-(int)(strstr(buf,"\r\n")-buf)-3,fp);
+				fputs(strstr(buf,"\r\n")+4,fp);
+				// for(int i=0;i<20;i++)printf("%c %d\n",buf[i],(int)buf[i]);
+				first=0;
+			}else fwrite(buf,sizeof(char),numbytes,fp);
 		}
 		printf("finish writing into a file\n");
 		fclose(fp);

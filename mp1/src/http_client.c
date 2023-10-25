@@ -16,7 +16,7 @@
 
 #define PORT "3490" // the port client will be connecting to 
 
-#define MAXDATASIZE 5120 // max number of bytes we can get at once 
+#define MAXDATASIZE 2048 // max number of bytes we can get at once 
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -31,7 +31,7 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	int sockfd, numbytes;  
-	char buf[MAXDATASIZE],host[MAXDATASIZE],hostname[MAXDATASIZE],port[MAXDATASIZE], out2[MAXDATASIZE], wget[MAXDATASIZE*4];
+	char buf[MAXDATASIZE],host[MAXDATASIZE],hostname[MAXDATASIZE],port[MAXDATASIZE], out2[MAXDATASIZE], wget[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
 
 	// send(sockfd, wget, strlen(wget), 0);
 	snprintf(request,sizeof(request),wget);
+	printf("request:\n%s\n",request);
 	if(send(sockfd,request,strlen(request),0)==-1){
 		perror("request error");
 		exit(1);
@@ -140,8 +141,8 @@ int main(int argc, char *argv[])
 		while(1){
 			memset(buf,'\0',sizeof(buf));
 			numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0);
-			printf("%d\n",numbytes);
-			printf("%s\n",buf);
+			// printf("%d\n",numbytes);
+			// printf("%s\n",buf);
 			if(numbytes<=0) break;
 			// if(numbytes==-1){
 			// 	perror("recv error");
@@ -156,11 +157,9 @@ int main(int argc, char *argv[])
 				first=0;
 			}else fwrite(buf,1,numbytes,fp);
 		}
-		printf("finish writing into a file\n");
+		// printf("finish writing into a file\n");
 		fclose(fp);
 	}
-
-	printf("client: received '%s'\n",buf);
 
 	close(sockfd);
 
